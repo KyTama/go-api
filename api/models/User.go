@@ -2,24 +2,24 @@ package models
 
 import (
 	"errors"
+	"github.com/badoux/checkmail"
+	"github.com/jinzhu/gorm"
+	"golang.org/x/crypto/bcrypt"
 	"html"
 	"log"
 	"strings"
 	"time"
-	"golang.org/x/crypto/bcrypt"
-	"github.com/badoux/checkmail"
-	"github.com/jinzhu/gorm"
 )
 
 type User struct {
-	ID				uint32 		`gorm:"primary_key;auto_increment" json:"id"`
-	Username 		string 		`gorm:"size:255;not null;unique" json:"username"`
-	Fullname		string 		`gorm:"size:255;not null;" json:"fullname"`
-	Email 			string 		`gorm:"size:100;not null;unique" json:"email"`
-	Password		string		`gorm:"size:100;not null;" json:"password"`
-	CreatedAt		time.Time 	`gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	LastUpdatedAt	time.Time	`gorm:"default:CURRENT_TIMESTAMP" json:"last_updated_at"`
-	Active			bool		`gorm:"default:true" json"active"`
+	ID            uint32    `gorm:"primary_key;auto_increment" json:"id"`
+	Username      string    `gorm:"size:255;not null;unique" json:"username"`
+	Fullname      string    `gorm:"size:255;not null;" json:"fullname"`
+	Email         string    `gorm:"size:100;not null;unique" json:"email"`
+	Password      string    `gorm:"size:100;not null;" json:"password"`
+	CreatedAt     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	LastUpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"last_updated_at"`
+	Active        bool      `gorm:"default:true" json"active"`
 }
 
 func Hash(password string) ([]byte, error) {
@@ -42,12 +42,14 @@ func (u *User) BeforeSave() error {
 func (u *User) Prepare() {
 	u.ID = 0
 	u.Username = html.EscapeString(strings.TrimSpace(u.Username))
+	u.Fullname = html.EscapeString(strings.TrimSpace(u.Fullname))
 	u.Email = html.EscapeString(strings.TrimSpace(u.Email))
 	u.CreatedAt = time.Now()
 	u.LastUpdatedAt = time.Now()
+	u.Active = true
 }
 
-func (u *User) Validate(action string) error  {
+func (u *User) Validate(action string) error {
 	switch strings.ToLower(action) {
 	case "update":
 		if u.Username == "" {
@@ -108,19 +110,19 @@ func (u *User) SaveUser(db *gorm.DB) (*User, error) {
 	return u, nil
 }
 
-func (u *User) FindAllUsers(db *gorm.DB) (*[]User, error) {
+func (u *User) GetUsers(db *gorm.DB) (*[]User, error) {
 	var err error
 	users := []User{}
-	err = db.Debug().Model(&User{}).Limit(100).Find(&users).Error
+	err = db.Debug().Model(&User{}).Where("active = true").Limit(100).Find(&users).Error
 	if err != nil {
 		return &[]User{}, err
 	}
 	return &users, err
 }
 
-func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
+func (u *User) GetUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	var err error
-	err = db.Debug().Model(User{}).Where("id = ?", uid).Take(&u).Error
+	err = db.Debug().Model(User{}).Where("id = ? and active = true", uid).Take(&u).Error
 	if err != nil {
 		return &User{}, err
 	}
@@ -139,10 +141,10 @@ func (u *User) UpdateUserByID(db *gorm.DB, uid uint32) (*User, error) {
 	}
 	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
-			"password": u.Password,
-			"username": u.Username,
-			"fullname": u.Fullname,
-			"email": u.Email,
+			"password":        u.Password,
+			"username":        u.Username,
+			"fullname":        u.Fullname,
+			"email":           u.Email,
 			"last_updated_at": time.Now(),
 		},
 	)
@@ -158,13 +160,13 @@ func (u *User) UpdateUserByID(db *gorm.DB, uid uint32) (*User, error) {
 }
 
 func (u *User) DeleteUserByID(db *gorm.DB, uid uint32) (int64, error) {
-	db = db.Debug().Model(&User{}).Where("id = ?", uid).Take(&User{}).UpdateColumns(
+	db = db.Debug().Model(&User{}).Where("id = ? and active = true", uid).Take(&User{}).UpdateColumns(
 		map[string]interface{}{
-			"active": false,
-			"update_at": time.Now(),
+			"active":          false,
+			"last_updated_at": time.Now(),
 		},
 	)
-	
+
 	if db.Error != nil {
 		return 0, db.Error
 	}
