@@ -172,3 +172,14 @@ func (u *User) DeleteUserByID(db *gorm.DB, uid uint32) (int64, error) {
 	}
 	return db.RowsAffected, nil
 }
+
+func (u *User) SignIn(db *gorm.DB, email string) (*User, error) {
+	var err error
+	err = db.Debug().Model(User{}).Where("email = ? and active = true", email).Take(&u).Error
+
+	if err != nil {
+		return &User{}, err
+	}
+
+	return u, err
+}
