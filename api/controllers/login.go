@@ -46,8 +46,8 @@ func (server *Server) Login(w http.ResponseWriter, r *http.Request) {
 func (server *Server) SignIn(email, password string) (string, error) {
 
 	var err error
-
-	user, err := models.User{}.SignIn(server.DB, email)
+	user := &models.User{}
+	user, err = user.SignIn(server.DB, email)
 	if err != nil {
 		return "", err
 	}

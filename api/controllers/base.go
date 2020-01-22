@@ -7,6 +7,9 @@ import (
 	"go-api/api/models"
 	"log"
 	"net/http"
+
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 )
 
 type Server struct {

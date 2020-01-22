@@ -105,8 +105,8 @@ func (server *Server) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if the post is exist
-
-	post, err := models.Post{}.GetPostByID(server.DB, pid)
+	post := &models.Post{}
+	post, err = post.GetPostByID(server.DB, pid)
 	if err != nil {
 		responses.ERROR(w, http.StatusNotFound, errors.New("Post Not Found"))
 		return
@@ -177,7 +177,8 @@ func (server *Server) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//check if the post exist
-	post, err := models.Post{}.GetPostByID(server.DB, pid)
+	post := &models.Post{}
+	post, err = post.GetPostByID(server.DB, pid)
 	if err != nil {
 		responses.ERROR(w, http.StatusNotFound, errors.New("Post Not Found"))
 		return
